@@ -10,6 +10,7 @@ pkgs.mkShell {
     buildInputs = [
         pkgs.git
         pkgs.nodePackages.pnpm
+        pkgs.process-compose
     ];
 
     shellHook = ''

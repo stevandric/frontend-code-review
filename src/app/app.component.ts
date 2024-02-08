@@ -1,6 +1,22 @@
-import {Component, Input} from '@angular/core';
+import {Component, Injectable, Input, OnInit} from '@angular/core';
 import {NgClass, NgForOf, NgIf} from "@angular/common";
 import {FormsModule, ReactiveFormsModule} from "@angular/forms";
+
+@Injectable()
+class MessageService {
+  messages: Message[] = [];
+
+  async all() {
+      const res = await fetch('http://127.0.0.1:4010/messages')
+      const data = await res.json();
+
+      this.messages = data.messages.map((message: any) => new Message(message.text, message.status));
+  }
+
+  async add(message: Message) {
+    this.messages.push(message);
+  }
+}
 
 class Message {
   text;
@@ -38,6 +54,7 @@ class MessageComponent {
 @Component({
   selector: 'app-chat',
   standalone: true,
+  providers: [MessageService],
   imports: [
     NgForOf,
     MessageComponent
@@ -50,20 +67,25 @@ class MessageComponent {
     </div>
   `,
 })
-class ChatComponent {
-  messages: Message[];
-    constructor() {
-        this.messages = [
-          new Message('Hi', 'sent'),
-          new Message('Hi', 'sent'),
-          new Message('Hi', 'sent'),
-        ];
+class ChatComponent implements OnInit {
+  messages: Message[] = [];
+    constructor(
+        private messageService: MessageService
+    ) {
+
+    }
+
+    async ngOnInit() {
+      // @ts-ignore
+      await this.messageService.all();
+      this.messages = this.messageService.messages;
     }
 }
 
 @Component({
   selector: 'app-create-message',
   standalone: true,
+  providers: [MessageService],
   imports: [
     ReactiveFormsModule,
     FormsModule,
@@ -75,7 +97,7 @@ class ChatComponent {
     <div *ngIf="! message.empty()">
       <app-massage [message]="message" no="preview"></app-massage>
     </div>
-    <form>
+    <form (ngSubmit)="onSubmit()">
       <label class="mt-4">
         <div>Write Message</div>
         <textarea class="block w-full" required name="text" [(ngModel)]="message.text"></textarea>
@@ -92,6 +114,19 @@ class ChatComponent {
 })
 class CreateMessageComponent {
   message: Message = new Message('', 'draft');
+  private messageService: MessageService;
+
+  constructor(messageService: MessageService) {
+    this.messageService = messageService;
+  }
+
+  async onSubmit() {
+      this.message.status = 'pending';
+      const res = await fetch('http://127.0.0.1:4010/messages/send');
+      res.status === 204 ? this.message.status = 'sent' : this.message.status = 'failed';
+      await this.messageService.add(this.message);
+      this.message = new Message('', 'draft');
+  }
 }
 
 @Component({
