@@ -35,7 +35,7 @@ paths:
                   - text: "Thanks, I'm fine. How about you?"
                     status: "sent"
   /messages/send:
-    get:
+    post:
       summary: Send a Message
       requestBody:
         content:
